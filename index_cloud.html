@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>客户档案信息记录本（云端同步版）</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --text: #e7eefc;
+      --muted: #a9b8dc;
+      --accent: #4ea1ff;
+      --danger: #ff5a7a;
+      --ok: #3ddc97;
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(78,161,255,.18), transparent 55%),
+        radial-gradient(900px 700px at 90% 20%, rgba(61,220,151,.10), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+    header {
+      padding: 18px 18px 12px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: .2px; }
+    header .meta { color: var(--muted); font-size: 12px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+    .pill {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      padding: 6px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .container {
+      padding: 0 18px 18px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 980px) { .container { grid-template-columns: 1fr; } }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .panel .hd {
+      padding: 12px 14px;
+      background: rgba(255,255,255,.03);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .panel .hd .title { font-weight: 700; font-size: 13px; letter-spacing: .2px; }
+    .panel .bd { padding: 12px 14px; }
+    .btnbar { display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      color: var(--text);
+      background: rgba(255,255,255,.03);
+      font-weight: 650;
+      font-size: 13px;
+    }
+    button.primary { border-color: rgba(78,161,255,.55); background: rgba(78,161,255,.18); }
+    button.danger { border-color: rgba(255,90,122,.6); background: rgba(255,90,122,.14); }
+    button.ok { border-color: rgba(61,220,151,.55); background: rgba(61,220,151,.14); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.15);
+      color: var(--text);
+      padding: 10px 10px;
+      outline: none;
+      font-size: 13px;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    input::placeholder, textarea::placeholder { color: rgba(169,184,220,.75); }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(78,161,255,.6);
+      box-shadow: 0 0 0 3px rgba(78,161,255,.18);
+    }
+    .search { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+    .list { display: grid; gap: 8px; }
+    .customer-card {
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.12);
+      cursor: pointer;
+      transition: transform .06s ease, background .06s ease, border-color .06s ease;
+    }
+    .customer-card:hover { transform: translateY(-1px); border-color: rgba(78,161,255,.45); background: rgba(78,161,255,.10); }
+    .customer-card.active { border-color: rgba(78,161,255,.65); background: rgba(78,161,255,.18); }
+    .customer-card .name { font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .tag { font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); padding: 3px 8px; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.03); }
+    .customer-card .sub { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.4; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } }
+    .section { margin-top: 14px; padding-top: 14px; border-top: 1px dashed rgba(255,255,255,.18); }
+    .table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .table th, .table td { border-bottom: 1px solid rgba(255,255,255,.10); padding: 9px 8px; text-align: left; font-size: 12px; vertical-align: top; }
+    .table th { color: var(--muted); font-weight: 700; }
+    .table td code { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .notice {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .small { font-size: 12px; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>客户档案信息记录本（云端同步版）</h1>
+    <div class="meta">
+      <div class="pill" id="autosaveStatus">未登录</div>
+      <div class="pill">自动保存：每 1 分钟（有修改时才写入）</div>
+    </div>
+  </header>
+
+  <!-- 登录面板 -->
+  <section class="panel" style="max-width:720px; margin:0 auto 18px; padding:0 18px;">
+    <div class="hd">
+      <div class="title">登录 / 注册（用于云端同步）</div>
+      <div class="pill">Firebase + Email/Password</div>
+    </div>
+    <div class="bd">
+      <div class="notice" style="margin-bottom:12px;">
+        请先在文件里替换 <code style="font-family:var(--mono);">FIREBASE_CONFIG</code>。
+        然后使用同一个邮箱在手机和电脑登录即可同步数据。
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label>邮箱</label>
+          <input id="authEmail" type="email" placeholder="name@example.com" />
+        </div>
+        <div>
+          <label>密码</label>
+          <input id="authPassword" type="password" placeholder="至少 6 位" />
+        </div>
+      </div>
+
+      <div class="btnbar" style="margin-top:12px;">
+        <button class="primary" id="btnSignIn">登录</button>
+        <button id="btnSignUp">注册</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 主界面 -->
+  <div id="appShell" class="container" style="display:none;">
+    <section class="panel">
+      <div class="hd">
+        <div class="title">客户列表</div>
+        <div class="btnbar">
+          <button class="primary" id="btnNew">新增客户</button>
+          <button id="btnExport">导出 JSON</button>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="search">
+          <div class="grow" style="flex:1; min-width:180px;">
+            <label>搜索（姓名/公司/标签/负责人）</label>
+            <input id="searchInput" placeholder="例如：张三 或 医疗 或 王经理" />
+          </div>
+          <div style="width:150px; min-width:150px;">
+            <label>筛选阶段</label>
+            <select id="stageFilter">
+              <option value="">全部</option>
+              <option value="潜在">潜在</option>
+              <option value="已联系">已联系</option>
+              <option value="评估中">评估中</option>
+              <option value="成交">成交</option>
+              <option value="长期跟进">长期跟进</option>
+            </select>
+          </div>
+        </div>
+        <div class="hr" style="height:1px;background:rgba(255,255,255,.12);margin:12px 0;"></div>
+        <div class="list" id="customerList"></div>
+        <div class="notice" style="margin-top:12px;">
+          数据保存在 Firebase 云端（按你的登录账号隔离）。
+          建议你定期导出 JSON 备份。
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="hd">
+        <div class="title">客户档案编辑</div>
+        <div class="btnbar">
+          <button class="ok" id="btnSaveNow">立即保存</button>
+          <button class="danger" id="btnDelete" title="删除当前客户">删除</button>
+          <button id="btnSignOut" title="退出登录">退出登录</button>
+        </div>
+      </div>
+      <div class="bd">
+        <div id="emptyState" class="notice">
+          还没有选择客户。点击左侧客户卡片开始编辑；或者点击“新增客户”。
+        </div>
+
+        <div id="editor" style="display:none;">
+          <div class="grid2">
+            <div>
+              <label>客户姓名/称呼</label>
+              <input id="f_contactName" placeholder="例如：张三" />
+            </div>
+            <div>
+              <label>公司/组织</label>
+              <input id="f_company" placeholder="例如：XX 医药有限公司" />
+            </div>
+          </div>
+
+          <div class="grid2 section" style="margin-top:10px; border-top:none; padding-top:0;">
+            <div>
+              <label>职位/角色</label>
+              <input id="f_title" placeholder="例如：采购经理" />
+            </div>
+            <div>
+              <label>客户来源</label>
+              <input id="f_source" placeholder="例如：展会/转介绍/官网咨询" />
+            </div>
+          </div>
+
+          <div class="grid2 section">
+            <div>
+              <label>行业</label>
+              <input id="f_industry" placeholder="例如：医院/兽医诊所/经销商" />
+            </div>
+            <div>
+              <label>负责人</label>
+              <input id="f_owner" placeholder="例如：王经理" />
+            </div>
+          </div>
+
+          <div class="grid2 section">
+            <div>
+              <label>当前阶段</label>
+              <select id="f_stage">
+                <option value="潜在">潜在</option>
+                <option value="已联系">已联系</option>
+                <option value="评估中">评估中</option>
+                <option value="成交">成交</option>
+                <option value="长期跟进">长期跟进</option>
+              </select>
+            </div>
+            <div>
+              <label>优先级</label>
+              <select id="f_priority">
+                <option value="高">高</option>
+                <option value="中">中</option>
+                <option value="低">低</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid2 section">
+            <div>
+              <label>标签（用逗号分隔）</label>
+              <input id="f_tags" placeholder="例如：甲方/新客户/需要招标" />
+            </div>
+            <div>
+              <label>地址</label>
+              <input id="f_address" placeholder="可选" />
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="grid2">
+              <div>
+                <label>电话</label>
+                <input id="f_phone" placeholder="可选" />
+              </div>
+              <div>
+                <label>邮箱</label>
+                <input id="f_email" placeholder="可选" />
+              </div>
+            </div>
+            <div class="grid2" style="margin-top:12px;">
+              <div>
+                <label>微信</label>
+                <input id="f_wechat" placeholder="可选" />
+              </div>
+              <div>
+                <label>官网/网址</label>
+                <input id="f_website" placeholder="可选" />
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="grid2">
+              <div>
+                <label>最后联系时间</label>
+                <input id="f_lastContactAt" type="date" />
+              </div>
+              <div>
+                <label>下次计划联系时间</label>
+                <input id="f_nextContactAt" type="date" />
+              </div>
+            </div>
+            <div style="margin-top:12px;">
+              <label>备注</label>
+              <textarea id="f_notes" placeholder="可随时更新……"></textarea>
+            </div>
+          </div>
+
+          <div class="section">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+              <div>
+                <div style="font-weight:800;">跟进记录（可选）</div>
+                <div class="small" style="color: var(--muted); margin-top:4px;">按日期倒序显示。</div>
+              </div>
+              <div class="btnbar"><button id="btnAddActivity" class="primary">新增记录</button></div>
+            </div>
+
+            <div class="notice" id="activityNotice" style="margin-top:10px; display:none;">暂时没有跟进记录。</div>
+            <table class="table" id="activityTable" style="display:none;">
+              <thead>
+                <tr>
+                  <th style="width:120px;">日期</th>
+                  <th>沟通内容</th>
+                  <th style="width:140px;">结果/后续</th>
+                  <th style="width:90px;"></th>
+                </tr>
+              </thead>
+              <tbody id="activityTbody"></tbody>
+            </table>
+
+            <div class="section" style="margin-top:12px; padding-top:12px;">
+              <div class="grid2">
+                <div>
+                  <label>日期</label>
+                  <input id="a_date" type="date" />
+                </div>
+                <div>
+                  <label>结果/后续动作</label>
+                  <input id="a_result" placeholder="例如：对方同意寄样，待确认预算" />
+                </div>
+              </div>
+              <div style="margin-top:12px;">
+                <label>沟通内容 / 需求</label>
+                <textarea id="a_content" placeholder="例如：了解用量、合规要求、下一步流程……"></textarea>
+              </div>
+              <div class="btnbar" style="margin-top:12px;">
+                <button class="ok" id="btnCommitActivity">添加到该客户</button>
+                <button id="btnClearActivity">清空输入</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;" class="notice">
+            安全提示：这是云端同步网页。建议你定期导出 JSON 备份。
+          </div>
+
+          <div style="display:none;">
+            <input type="file" id="importFile" accept="application/json" />
+          </div>
+          <div class="btnbar" style="margin-top:12px;">
+            <button id="btnImport">导入 JSON（覆盖当前云端数据）</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    /***********************
+     * 1) 替换成你的 Firebase 配置
+     ***********************/
+    const FIREBASE_CONFIG = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const SAVE_INTERVAL_MS = 60 * 1000;
+    const stageOptions = ["潜在", "已联系", "评估中", "成交", "长期跟进"];
+    const priorityOptions = ["高", "中", "低"];
+
+    const $ = (id) => document.getElementById(id);
+
+    let auth = null;
+    let db = null;
+    let authUser = null;
+
+    let state = { customers: [] };
+    let activeId = null;
+    let dirtySince = null;
+    let saveInFlight = null;
+
+    function safeParseJSON(text) {
+      try { return JSON.parse(text); } catch { return null; }
+    }
+
+    function uid() {
+      return (Date.now().toString(36) + Math.random().toString(36).slice(2, 10)).toUpperCase();
+    }
+
+    function normalizeCustomer(c) {
+      const tags = Array.isArray(c.tags)
+        ? c.tags
+        : (typeof c.tags === "string" ? c.tags.split(",").map(s => s.trim()).filter(Boolean) : []);
+      const stage = stageOptions.includes(c.stage) ? c.stage : "潜在";
+      const priority = priorityOptions.includes(c.priority) ? c.priority : "中";
+      return {
+        id: String(c.id ?? uid()),
+        contactName: String(c.contactName ?? ""),
+        company: String(c.company ?? ""),
+        title: String(c.title ?? ""),
+        source: String(c.source ?? ""),
+        industry: String(c.industry ?? ""),
+        owner: String(c.owner ?? ""),
+        stage,
+        priority,
+        tags,
+        address: String(c.address ?? ""),
+        phone: String(c.phone ?? ""),
+        email: String(c.email ?? ""),
+        wechat: String(c.wechat ?? ""),
+        website: String(c.website ?? ""),
+        lastContactAt: c.lastContactAt ? String(c.lastContactAt) : "",
+        nextContactAt: c.nextContactAt ? String(c.nextContactAt) : "",
+        notes: String(c.notes ?? ""),
+        updatedAtHint: typeof c.updatedAtHint === "number" ? c.updatedAtHint : 0,
+        activity: Array.isArray(c.activity) ? c.activity.map(a => ({
+          id: String(a.id ?? uid()),
+          date: a.date ? String(a.date) : "",
+          content: String(a.content ?? ""),
+          result: String(a.result ?? "")
+        })) : []
+      };
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (ch) => {
+        switch (ch) {
+          case "&": return "&amp;";
+          case "<": return "&lt;";
+          case ">": return "&gt;";
+          case "\"": return "&quot;";
+          case "'": return "&#039;";
+          default: return ch;
+        }
+      });
+    }
+
+    function setAutosaveStatus(text) { $("autosaveStatus").textContent = text; }
+
+    function userCustomersCol() {
+      if (!authUser) throw new Error("not signed in");
+      return db.collection("users").doc(authUser.uid).collection("customers");
+    }
+
+    function customerToDoc(c) {
+      return {
+        contactName: c.contactName,
+        company: c.company,
+        title: c.title,
+        source: c.source,
+        industry: c.industry,
+        owner: c.owner,
+        stage: c.stage,
+        priority: c.priority,
+        tags: c.tags,
+        address: c.address,
+        phone: c.phone,
+        email: c.email,
+        wechat: c.wechat,
+        website: c.website,
+        lastContactAt: c.lastContactAt,
+        nextContactAt: c.nextContactAt,
+        notes: c.notes,
+        updatedAtHint: c.updatedAtHint,
+        activity: c.activity || []
+      };
+    }
+
+    function getActiveCustomer() {
+      if (!activeId) return null;
+      return state.customers.find(c => c.id === activeId) || null;
+    }
+
+    function formatCustomerDisplay(c) {
+      const primary = (c.contactName || c.company) ? (c.contactName || c.company) : "未命名客户";
+      const sub = [
+        c.company ? c.company : null,
+        c.stage ? `阶段：${c.stage}` : null,
+        c.owner ? `负责人：${c.owner}` : null
+      ].filter(Boolean).join(" · ");
+      const tagStr = (c.tags || []).slice(0, 3).join(", ");
+      return { primary, sub, tagStr };
+    }
+
+    function renderCustomerList() {
+      const listEl = $("customerList");
+      const search = ($("searchInput").value || "").trim().toLowerCase();
+      const stageFilter = ($("stageFilter").value || "").trim();
+
+      const filtered = state.customers
+        .slice()
+        .sort((a, b) => (b.updatedAtHint ?? 0) - (a.updatedAtHint ?? 0))
+        .filter(c => {
+          if (stageFilter && c.stage !== stageFilter) return false;
+          if (!search) return true;
+          const hay = [
+            c.contactName, c.company, c.owner, c.stage,
+            (c.tags || []).join(","),
+            c.notes
+          ].join(" ").toLowerCase();
+          return hay.includes(search);
+        });
+
+      listEl.innerHTML = "";
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<div class="notice">没有匹配的客户。你可以点击“新增客户”。</div>`;
+        return;
+      }
+
+      for (const c of filtered) {
+        const { primary, sub, tagStr } = formatCustomerDisplay(c);
+        const card = document.createElement("div");
+        card.className = "customer-card" + (c.id === activeId ? " active" : "");
+        card.addEventListener("click", async () => {
+          if (c.id === activeId) return;
+          await saveActiveCustomerIfDirty("切换前保存");
+          setActiveCustomer(c.id);
+        });
+        card.innerHTML = `
+          <div class="name">
+            <div>${escapeHtml(primary)}</div>
+            <div class="tag">${escapeHtml(c.priority || "")}</div>
+          </div>
+          <div class="sub">${escapeHtml(sub || "")}</div>
+          ${tagStr ? `<div class="sub" style="margin-top:8px;"><span class="tag" style="padding:2px 8px;">标签</span> <span class="small" style="color:var(--muted);">${escapeHtml(tagStr)}</span></div>` : ""}
+        `;
+        listEl.appendChild(card);
+      }
+    }
+
+    function setFieldValue(el, value) { el.value = value ?? ""; }
+
+    function renderEditor() {
+      const c = getActiveCustomer();
+      if (!c) return;
+
+      $("emptyState").style.display = "none";
+      $("editor").style.display = "block";
+
+      setFieldValue($("f_contactName"), c.contactName);
+      setFieldValue($("f_company"), c.company);
+      setFieldValue($("f_title"), c.title);
+      setFieldValue($("f_source"), c.source);
+      setFieldValue($("f_industry"), c.industry);
+      setFieldValue($("f_owner"), c.owner);
+      $("f_stage").value = c.stage || "潜在";
+      $("f_priority").value = c.priority || "中";
+      setFieldValue($("f_tags"), (c.tags || []).join(", "));
+      setFieldValue($("f_address"), c.address);
+      setFieldValue($("f_phone"), c.phone);
+      setFieldValue($("f_email"), c.email);
+      setFieldValue($("f_wechat"), c.wechat);
+      setFieldValue($("f_website"), c.website);
+      setFieldValue($("f_lastContactAt"), c.lastContactAt || "");
+      setFieldValue($("f_nextContactAt"), c.nextContactAt || "");
+      setFieldValue($("f_notes"), c.notes);
+
+      const tb = $("activityTbody");
+      const table = $("activityTable");
+      const notice = $("activityNotice");
+      const list = (c.activity || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+      tb.innerHTML = "";
+      if (list.length === 0) {
+        table.style.display = "none";
+        notice.style.display = "block";
+      } else {
+        table.style.display = "table";
+        notice.style.display = "none";
+        for (const a of list) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><code>${escapeHtml(a.date || "")}</code></td>
+            <td>${escapeHtml(a.content || "")}</td>
+            <td>${escapeHtml(a.result || "")}</td>
+            <td>
+              <button style="padding:8px 10px; border-radius:10px;" title="删除该记录">×</button>
+            </td>
+          `;
+          tr.querySelector("button").addEventListener("click", async (ev) => {
+            ev.stopPropagation();
+            const ok = confirm("确定删除该跟进记录吗？");
+            if (!ok) return;
+            c.activity = (c.activity || []).filter(x => x.id !== a.id);
+            c.updatedAtHint = Date.now();
+            dirtySince = Date.now();
+            renderEditor();
+          });
+          tb.appendChild(tr);
+        }
+      }
+    }
+
+    function pullEditorToState() {
+      const c = getActiveCustomer();
+      if (!c) return;
+
+      const tags = ($("f_tags").value || "").split(",").map(s => s.trim()).filter(Boolean);
+      c.contactName = $("f_contactName").value.trim();
+      c.company = $("f_company").value.trim();
+      c.title = $("f_title").value.trim();
+      c.source = $("f_source").value.trim();
+      c.industry = $("f_industry").value.trim();
+      c.owner = $("f_owner").value.trim();
+      c.stage = $("f_stage").value;
+      c.priority = $("f_priority").value;
+      c.tags = tags;
+      c.address = $("f_address").value.trim();
+      c.phone = $("f_phone").value.trim();
+      c.email = $("f_email").value.trim();
+      c.wechat = $("f_wechat").value.trim();
+      c.website = $("f_website").value.trim();
+      c.lastContactAt = $("f_lastContactAt").value;
+      c.nextContactAt = $("f_nextContactAt").value;
+      c.notes = $("f_notes").value;
+      dirtySince = dirtySince ?? Date.now();
+    }
+
+    async function saveActiveCustomerIfDirty(reason) {
+      if (!authUser) return;
+      if (!activeId) return;
+      if (!dirtySince) return;
+      if (saveInFlight) return saveInFlight;
+
+      saveInFlight = (async () => {
+        try {
+          pullEditorToState();
+          const c = getActiveCustomer();
+          if (!c) return;
+          c.updatedAtHint = Date.now();
+          await userCustomersCol().doc(c.id).set(customerToDoc(c), { merge: true });
+          dirtySince = null;
+          const ts = new Date().toLocaleString();
+          setAutosaveStatus(reason ? `已同步：${ts}（${reason}）` : `已同步：${ts}`);
+          renderCustomerList();
+        } catch (e) {
+          console.error(e);
+          setAutosaveStatus("同步失败：请检查网络/规则/配置");
+        } finally {
+          saveInFlight = null;
+        }
+      })();
+
+      return saveInFlight;
+    }
+
+    function wireEditorEvents() {
+      const editorIds = [
+        "f_contactName","f_company","f_title","f_source","f_industry","f_owner","f_stage","f_priority",
+        "f_tags","f_address","f_phone","f_email","f_wechat","f_website","f_lastContactAt","f_nextContactAt","f_notes"
+      ];
+      for (const id of editorIds) {
+        const el = $(id);
+        const handler = () => pullEditorToState();
+        el.addEventListener("input", handler);
+        if (el.tagName === "SELECT") el.addEventListener("change", handler);
+      }
+    }
+
+    async function loadCustomers() {
+      if (!authUser) return;
+      setAutosaveStatus("正在拉取云端数据……");
+      const snap = await userCustomersCol().orderBy("updatedAtHint", "desc").get();
+      state.customers = snap.docs.map(d => normalizeCustomer({ id: d.id, ...d.data() }));
+      activeId = state.customers[0]?.id ?? null;
+      dirtySince = null;
+
+      if (!activeId) {
+        $("emptyState").style.display = "block";
+        $("editor").style.display = "none";
+        $("customerList").innerHTML = `<div class="notice">暂无客户。点击“新增客户”。</div>`;
+      } else {
+        renderCustomerList();
+        renderEditor();
+      }
+      setAutosaveStatus("已连接云端");
+    }
+
+    function createNewCustomer() {
+      if (!authUser) return;
+      const newC = normalizeCustomer({
+        id: uid(),
+        contactName: "",
+        company: "",
+        title: "",
+        source: "",
+        industry: "",
+        owner: "",
+        stage: "潜在",
+        priority: "中",
+        tags: [],
+        address: "",
+        phone: "",
+        email: "",
+        wechat: "",
+        website: "",
+        lastContactAt: "",
+        nextContactAt: "",
+        notes: "",
+        activity: [],
+        updatedAtHint: Date.now()
+      });
+      state.customers.unshift(newC);
+      activeId = newC.id;
+      dirtySince = Date.now();
+      renderCustomerList();
+      renderEditor();
+    }
+
+    async function deleteActiveCustomer() {
+      const c = getActiveCustomer();
+      if (!c) return;
+      const ok = confirm(`确定删除客户：${c.contactName || c.company || "未命名客户"} 吗？\n删除后无法恢复。`);
+      if (!ok) return;
+
+      await saveActiveCustomerIfDirty("删除前保存");
+      try {
+        await userCustomersCol().doc(c.id).delete();
+        state.customers = state.customers.filter(x => x.id !== c.id);
+        activeId = state.customers[0]?.id ?? null;
+        dirtySince = null;
+        if (!activeId) {
+          $("emptyState").style.display = "block";
+          $("editor").style.display = "none";
+        }
+        renderCustomerList();
+        renderEditor();
+        setAutosaveStatus("已删除客户");
+      } catch (e) {
+        console.error(e);
+        setAutosaveStatus("删除失败：请检查规则/网络");
+      }
+    }
+
+    function addActivityEntry() {
+      const c = getActiveCustomer();
+      if (!c) return;
+      const date = $("a_date").value;
+      const content = ($("a_content").value || "").trim();
+      const result = ($("a_result").value || "").trim();
+      if (!content) return alert("请先填写“沟通内容 / 需求”。");
+      c.activity = c.activity || [];
+      c.activity.push({ id: uid(), date: date || "", content, result });
+      c.updatedAtHint = Date.now();
+      dirtySince = Date.now();
+      $("a_content").value = "";
+      $("a_result").value = "";
+      $("a_date").value = $("a_date").value || new Date().toISOString().slice(0, 10);
+      renderEditor();
+    }
+
+    function initUIEvents() {
+      $("btnNew").addEventListener("click", () => createNewCustomer());
+      $("btnSaveNow").addEventListener("click", () => saveActiveCustomerIfDirty("手动保存"));
+      $("btnDelete").addEventListener("click", () => deleteActiveCustomer());
+      $("btnAddActivity").addEventListener("click", () => $("a_content").focus());
+      $("btnCommitActivity").addEventListener("click", () => addActivityEntry());
+      $("btnClearActivity").addEventListener("click", () => {
+        $("a_content").value = "";
+        $("a_result").value = "";
+        $("a_date").value = new Date().toISOString().slice(0, 10);
+      });
+
+      $("searchInput").addEventListener("input", renderCustomerList);
+      $("stageFilter").addEventListener("change", renderCustomerList);
+
+      $("btnExport").addEventListener("click", () => {
+        const blob = new Blob([JSON.stringify({ exportedAt: Date.now(), state }, null, 2)], { type: "application/json;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        a.href = url;
+        a.download = `客户档案备份_${stamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      $("btnImport").addEventListener("click", () => $("importFile").click());
+      $("importFile").addEventListener("change", async () => {
+        const file = $("importFile").files && $("importFile").files[0];
+        if (!file) return;
+        const text = await file.text();
+        const parsed = safeParseJSON(text);
+        if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.customers)) {
+          alert("导入失败：JSON 格式不正确。");
+          return;
+        }
+        const ok = confirm("导入将覆盖当前账号的云端数据。确定继续吗？");
+        if (!ok) return;
+
+        try {
+          setAutosaveStatus("导入中：清空旧数据……");
+          const existing = await userCustomersCol().get();
+          await Promise.all(existing.docs.map(d => d.ref.delete()));
+
+          const importedCustomers = parsed.customers.map(normalizeCustomer);
+          setAutosaveStatus("导入中：写入新数据……");
+          for (const c of importedCustomers) {
+            await userCustomersCol().doc(c.id).set(customerToDoc(c), { merge: true });
+          }
+
+          state.customers = importedCustomers;
+          activeId = state.customers[0]?.id ?? null;
+          dirtySince = null;
+          await loadCustomers();
+          setAutosaveStatus("导入完成（云端同步）");
+        } catch (e) {
+          console.error(e);
+          setAutosaveStatus("导入失败：请检查规则/网络/配置");
+        }
+      });
+
+      $("btnSignOut").addEventListener("click", async () => {
+        try { await auth.signOut(); } catch {}
+      });
+    }
+
+    function initAuthUI() {
+      $("btnSignIn").addEventListener("click", async () => {
+        const email = ($("authEmail").value || "").trim();
+        const password = $("authPassword").value || "";
+        if (!email || !password) return alert("请输入邮箱和密码");
+        try {
+          setAutosaveStatus("正在登录……");
+          await auth.signInWithEmailAndPassword(email, password);
+        } catch (e) {
+          alert("登录失败：" + (e?.message || e));
+        }
+      });
+      $("btnSignUp").addEventListener("click", async () => {
+        const email = ($("authEmail").value || "").trim();
+        const password = $("authPassword").value || "";
+        if (!email || !password) return alert("请输入邮箱和密码");
+        try {
+          setAutosaveStatus("正在注册……");
+          await auth.createUserWithEmailAndPassword(email, password);
+        } catch (e) {
+          alert("注册失败：" + (e?.message || e));
+        }
+      });
+    }
+
+    function initAutoSaveLoop() {
+      setInterval(() => {
+        if (!authUser) return;
+        void saveActiveCustomerIfDirty("定时保存");
+      }, SAVE_INTERVAL_MS);
+    }
+
+    async function init() {
+      initAuthUI();
+
+      try {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        auth = firebase.auth();
+        db = firebase.firestore();
+      } catch (e) {
+        console.error(e);
+        setAutosaveStatus("初始化失败：请先填写 FIREBASE_CONFIG");
+        return;
+      }
+
+      // 初始化 UI 监听（只做一次）
+      initUIEvents();
+      wireEditorEvents();
+
+      // 默认日期
+      $("a_date").value = new Date().toISOString().slice(0, 10);
+
+      auth.onAuthStateChanged(async (user) => {
+        authUser = user || null;
+        if (!authUser) {
+          $("appShell").style.display = "none";
+          setAutosaveStatus("未登录");
+          return;
+        }
+
+        $("appShell").style.display = "grid";
+        $("emptyState").style.display = "block";
+        $("editor").style.display = "none";
+        setAutosaveStatus("正在登录并连接云端……");
+        await loadCustomers();
+      });
+
+      initAutoSaveLoop();
+
+      if (String(FIREBASE_CONFIG.apiKey || "").startsWith("YOUR_")) {
+        setAutosaveStatus("请先在文件中粘贴 FIREBASE_CONFIG");
+      }
+    }
+
+    init().catch((e) => {
+      console.error(e);
+      setAutosaveStatus("初始化失败：请检查网络/配置");
+    });
+  </script>
+</body>
+</html>
+
